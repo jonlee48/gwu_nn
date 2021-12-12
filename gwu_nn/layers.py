@@ -112,33 +112,38 @@ class Dense(Layer):
 
 class Convolutional(Layer):
 
-    def __init__(self, output_size, add_bias=False, activation=None, input_size=None):
+    def __init__(self, num_kernels=1, kernel_size=3, activation=None, input_size=None):
         super().__init__(activation)
         self.type = None
         self.name = "Convolutional"
-        self.input_size = input_size
-        self.output_size = output_size
-        self.add_bias = add_bias
+        self.input = None # (input channels, img width, img height)
+        self.kernels = None # (num_kernels, kernel_size, kernel_size)
+        self.output = None # (num_kernels, img width, img height)
+
+        self.input_size = input_size # (input channels, img width, img height)
+        self.kernel_size = kernel_size # (n, n) odd number
+        self.output_size = num_kernels # corresponds to number of feature maps
 
 
     def init_weights(self, input_size):
+        assert(len(input_size) == 3) # expects 3d ndarray
         """Initialize the weights for the layer based on input and output size
 
         Args:
-            input_size (np.array): dimensions for the input array
+            input_size (np.array): dimensions for the input array (expects 3d ndarray)
         """
         if self.input_size is None:
             self.input_size = input_size
-
-        self.weights = np.random.randn(input_size, self.output_size) / np.sqrt(input_size + self.output_size)
-        if self.add_bias:
-            self.bias = np.random.randn(1, self.output_size) / np.sqrt(input_size + self.output_size)
+        
+        # initialize kernel weights (num_kernels, kernel_size, kernel_size)
+        self.kernels = np.random.randn(self.num_kernels, self.kernel_size, self.kernel_size)
 
 
     @apply_activation_forward
     def forward_propagation(self, input):
-        """Applies the forward propagation for a densely connected layer. This will compute the dot product between the
-        input value (calculated during forward propagation) and the layer's weight tensor.
+        assert(len(input.shape) == 3) # expects 3d ndarray
+        """Applies the forward propagation for a convolutional layer. This will compute the convolution between the
+        input value (calculated during forward propagation) and the layer's kernels.
 
         Args:
             input (np.array): Input tensor calculated during forward propagation up to this layer.
@@ -146,11 +151,19 @@ class Convolutional(Layer):
         Returns:
             np.array(float): The dot product of the input and the layer's weight tensor."""
         self.input = input
-        output = np.dot(input, self.weights)
-        if self.add_bias:
-            return output + self.bias
-        else:
-            return output
+
+        input_pad = 
+        
+        # (num_kernels, img width, img height)
+        output = np.zeros(shape=(self.num_kernels, self.input_size[1:]))
+
+        input_channels = input.shape[0]
+
+        for i in range(input_channels):
+            for k in range(self.num_kernels):
+
+
+        return output 
 
     @apply_activation_backward
     def backward_propagation(self, output_error, learning_rate):
@@ -170,3 +183,13 @@ class Convolutional(Layer):
         if self.add_bias:
             self.bias -= learning_rate * output_error
         return input_error
+
+    def apply_2d_padding(self, input, kernel_size):
+        """Helper function to apply kernel_size//2 padding around input"""
+
+        for ch in range(input.shape[0]):
+
+        return
+
+    def apply_1d_padding(self, input, kernel_size):
+        return 
