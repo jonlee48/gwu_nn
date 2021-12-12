@@ -152,7 +152,7 @@ class Convolutional(Layer):
             np.array(float): The dot product of the input and the layer's weight tensor."""
         self.input = input
 
-        input_pad = 
+        input_pad = np.stack([self.apply_2d_padding(channel, 5) for channel in input])
         
         # (num_kernels, img width, img height)
         output = np.zeros(shape=(self.num_kernels, self.input_size[1:]))
@@ -160,8 +160,12 @@ class Convolutional(Layer):
         input_channels = input.shape[0]
 
         for i in range(input_channels):
-            for k in range(self.num_kernels):
-
+            for k in range(self.num_kernels): #output channels
+                for i_w in range(input.shape[1]): #img width
+                    for i_h in range(input.shape[2]): # img height
+                        for k_w in range(self.kernel_size):
+                            for k_h in range(self.kernel_size):
+                                output[k][i_w][i_h] += self.kernels[k][k_w][k_h] * input_pad[i][i_w][i_h]
 
         return output 
 
@@ -184,12 +188,14 @@ class Convolutional(Layer):
             self.bias -= learning_rate * output_error
         return input_error
 
-    def apply_2d_padding(self, input, kernel_size):
-        """Helper function to apply kernel_size//2 padding around input"""
+    def apply_1d_padding(self, input_img, kernel_size):
+        """ Helper function to pad 1d array with kernel_size//2 zeros on either side """
+        pad = kernel_size//2
+        return np.concatenate([np.zeros(pad), input_img, np.zeros(pad)])
 
-        for ch in range(input.shape[0]):
-
-        return
-
-    def apply_1d_padding(self, input, kernel_size):
-        return 
+    def apply_2d_padding(self, input_img, kernel_size):
+        """ Helper function to pad 2d array with kernel_size//2 zeros on all sides """
+        pad_side = np.stack([self.apply_1d_padding(row, kernel_size) for row in input_img])
+        width = pad_side.shape[1]
+        pad_tops = np.vstack([np.zeros(width), pad_side,np.zeros(width)])
+        return pad_tops
