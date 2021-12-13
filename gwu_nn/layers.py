@@ -1,8 +1,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from gwu_nn.activation_layers import Sigmoid, RELU, Softmax
+from gwu_nn.activation_layers import Sigmoid, RELU, Softmax, Dummy
 
-activation_functions = {'relu': RELU, 'sigmoid': Sigmoid, 'softmax': Softmax}
+activation_functions = {'relu': RELU, 'sigmoid': Sigmoid, 'softmax': Softmax, 'dummy': Dummy}
 
 
 def apply_activation_forward(forward_pass):
@@ -106,6 +106,10 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
         input_error = np.dot(output_error, self.weights.T)
+
+        #print("input.T " + str(self.input.T.shape))
+        #print("output_error " + str(output_error.shape))
+
         weights_error = np.dot(self.input.T, output_error)
 
         self.weights -= learning_rate * weights_error
@@ -179,8 +183,7 @@ class Convolutional(Layer):
     @apply_activation_backward
     def backward_propagation(self, output_error, learning_rate):
         """Applies the backward propagation for a convolutional layer. This will calculate the output error
-         (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
-         kernel weights (dot product of the layer's input values and the output_error).
+         and will calculate the update gradient for the kernel weights
 
         Args:
             output_error (np.array): The gradient of the error up to this point in the network.

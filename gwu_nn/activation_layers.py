@@ -1,4 +1,4 @@
-from gwu_nn.activation_functions import SigmoidActivation, RELUActivation, SoftmaxActivation
+from gwu_nn.activation_functions import SigmoidActivation, RELUActivation, SoftmaxActivation, DummyActivation
 
 
 class ActivationLayer:
@@ -32,7 +32,12 @@ class ActivationLayer:
         Returns:
             np.array(float): backwards pass (output_error) up to this layer
         """
-        return output_error * self.activation_prime(self.input)
+        #print("2output_error " + str(output_error.shape))
+        prime =  self.activation_prime(self.input)
+        #print("2prime " + str(prime.shape))
+        back = output_error * prime
+        #print("back " + str(back.shape))
+        return back #output_error * self.activation_prime(self.input)
 
 
 class Sigmoid(ActivationLayer):
@@ -52,3 +57,9 @@ class Softmax(ActivationLayer):
     def __init__(self):
         super().__init__(SoftmaxActivation)
         self.name = "Softmax"
+
+class Dummy(ActivationLayer):
+    """Layer that applies no activation function"""
+    def __init__(self):
+        super().__init__(DummyActivation)
+        self.name = "Dummy"

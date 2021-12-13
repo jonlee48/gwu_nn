@@ -56,9 +56,36 @@ class MultiClassCrossEntropy(LossFunction):
 
     @classmethod
     def loss(cls, y_true, y_pred):
-        softmax_cross_entropy_loss = -1.0 * y_true * np.log(y_pred) - (1.0 - y_true) * np.log(1 - y_pred)
-        return np.sum(softmax_cross_entropy_loss)
+        # this looks correct
+        #print("multiclass loss func")
+        #print("mclf " + str(y_true.shape))
+        #print("mclf " + str(y_pred.shape))
+
+        # compute softmax on y_pred
+        epsilon = 1e-9
+        exps = np.exp(y_pred - np.max(y_pred))
+        softmax = exps / np.sum(exps)
+        softmax = np.clip(softmax, epsilon, 1 - epsilon) # added clipping to prevent infinity 
+
+        softmax_cross_entropy_loss = -1.0 * y_true * np.log(softmax) - (1.0 - y_true) * np.log(1 - softmax)
+        #print(softmax_cross_entropy_loss)
+        sm_sum = np.sum(softmax_cross_entropy_loss)
+        #print("sm_sum " + str(sm_sum))
+        return sm_sum
 
     @classmethod
     def loss_partial_derivative(cls, y_true, y_pred):
-        return y_pred - y_true
+        # compute softmax on y_pred
+        epsilon = 1e-9
+        exps = np.exp(y_pred - np.max(y_pred))
+        softmax = exps / np.sum(exps)
+        y_pred = np.clip(softmax, epsilon, 1 - epsilon) # added clipping to prevent infinity 
+
+        #print("is this loss prime1?")
+        #print("mclf1 " + str(y_true.shape))
+        #print("mclf1 " + str(y_pred.shape))
+
+        loss = y_pred - y_true
+        #loss = loss.reshape(-1,1) # reshape???
+
+        return loss#y_pred - y_true

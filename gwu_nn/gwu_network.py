@@ -61,13 +61,20 @@ class GWUNetwork():
                 for layer in self.layers:
                     output = layer.forward_propagation(output)
 
+                y_true = y_train[j].reshape(1, -1) # my way
+                #y_true = y_train[j].reshape(-1, 1) # original
+                #print("output " + str(output.shape))
+                #print("y_true " + str(y_true.shape))
+
                 # compute loss (for display purpose only)
-                y_true = np.array(y_train[j]).reshape(-1, 1)
                 err += self.loss(y_true, output)
+
+                # does y_true need to be reshaped again?
 
                 # backward propagation
                 error = self.loss_prime(y_true, output)
                 for layer in reversed(self.layers):
+                    #print("error " + str(error.shape))
                     error = layer.backward_propagation(error, self.learning_rate)
 
             # calculate average error on all samples
