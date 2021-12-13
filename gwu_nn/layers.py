@@ -325,3 +325,74 @@ class Flatten(Layer):
         
         return output_error.reshape(self.input.shape)
 
+class MaxPool(Layer):
+    
+    def __init__(self, input_size, pool_size, input_channels=1): # int input_size
+        super().__init__(None)
+        self.type = None
+        self.name = "MaxPool"
+        self.input = None # (input_size, input_size, input_channels)
+        self.pool_size = pool_size
+        self.input_size = input_size
+        self.output_size = input_size//pool_size
+
+        if (input_size % pool_size != 0):
+            print("input_size not evenly divisible by pool_size")
+
+
+    def init_weights(self, input_size):
+        """made arguments in __init__ mandatory"""
+        pass
+
+
+    @apply_activation_forward
+    def forward_propagation(self, input):
+        """Applies the forward propagation for a max pooling layer. This will just return the input in the pool with the max value
+        Args:
+            input (np.array): Input tensor calculated during forward propagation up to this layer.
+
+        Returns:
+            np.array(float): An output tensor with shape (input_size//pool_size, input_size//pool_size)"""
+
+        self.input = input # need this for back prop
+
+        size = self.input_size//self.pool_size
+        output = np.zeros(shape=(size,size))
+
+        for i_w in range(0, self.input.shape[0], self.pool_size): # img width
+            for i_h in range(0, self.input.shape[1], self.pool_size): # img height
+                mymax = float('-inf')
+                for p_w in range(self.pool_size):
+                    for p_h in range(self.pool_size):
+                        mymax = max(input[i_w+p_w][i_h+p_h], mymax)
+                output[i_w//self.pool_size][i_h//self.pool_size] = mymax
+
+        return output
+
+
+    @apply_activation_backward
+    def backward_propagation(self, output_error, learning_rate):
+        """Applies the backward propagation for a max pooling layer. This will return the gradient error for only the max value, (otherwise zero)
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+        
+        input_error = np.zeros_like(self.input)
+
+        for i_w in range(0, self.input.shape[0], self.pool_size): # input width
+            for i_h in range(0, self.input.shape[1], self.pool_size): # input height
+                mymax = float('-inf')
+                max_w = 0
+                max_h = 0
+                for p_w in range(self.pool_size):
+                    for p_h in range(self.pool_size):
+                        if (self.input[i_w+p_w][i_h+p_h] > mymax):
+                            mymax = self.input[i_w+p_w][i_h+p_h]
+                            max_w = p_w
+                            max_h = p_h
+                input_error[i_w+max_w][i_h+max_h] = output_error[i_w//self.pool_size][i_h//self.pool_size]
+
+        return input_error
