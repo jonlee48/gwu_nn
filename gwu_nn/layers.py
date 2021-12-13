@@ -66,10 +66,11 @@ class Dense(Layer):
         Args:
             input_size (np.array): dimensions for the input array
         """
+        if type(input_size) is tuple:
+            input_size = input_size[1]
+        
         if self.input_size is None:
-            self.input_size = input_size[1]
-
-        input_size = input_size[1]
+            self.input_size = input_size
 
         self.weights = np.random.randn(input_size, self.output_size) / np.sqrt(input_size + self.output_size)
         if self.add_bias:

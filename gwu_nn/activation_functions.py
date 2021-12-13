@@ -105,8 +105,11 @@ class SoftmaxActivation(ActivationFunction):
         Returns:
             np.array(floats): Softmax(x)
         """
+        epsilon = 1e-9
+
         exps = np.exp(x - np.max(x))
-        return exps / np.sum(exps)
+        softmax = exps / np.sum(exps)
+        return np.clip(softmax, epsilon, 1 - epsilon)
 
     # TODO: Fix partial div implementation of softmax
     @classmethod

@@ -51,3 +51,14 @@ class CrossEntropy(LossFunction):
         grad[range(m), y_true] -= 1
         grad = grad / m
         return grad
+
+class MultiClassCrossEntropy(LossFunction):
+
+    @classmethod
+    def loss(cls, y_true, y_pred):
+        softmax_cross_entropy_loss = -1.0 * y_true * np.log(y_pred) - (1.0 - y_true) * np.log(1 - y_pred)
+        return np.sum(softmax_cross_entropy_loss)
+
+    @classmethod
+    def loss_partial_derivative(cls, y_true, y_pred):
+        return y_pred - y_true

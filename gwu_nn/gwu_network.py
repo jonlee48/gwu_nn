@@ -1,7 +1,7 @@
 import numpy as np
-from gwu_nn.loss_functions import MSE, LogLoss, CrossEntropy
+from gwu_nn.loss_functions import MSE, LogLoss, CrossEntropy, MultiClassCrossEntropy
 
-loss_functions = {'mse': MSE, 'log_loss': LogLoss, 'cross_entropy': CrossEntropy}
+loss_functions = {'mse': MSE, 'log_loss': LogLoss, 'cross_entropy': CrossEntropy, 'multiclass_cross_entropy': MultiClassCrossEntropy}
 
 class GWUNetwork():
 
