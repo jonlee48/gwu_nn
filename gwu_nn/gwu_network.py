@@ -12,6 +12,7 @@ class GWUNetwork():
 
     def add(self, layer):
         if len(self.layers) > 0:
+            print(self.layers[-1].output_size)
             layer.init_weights(self.layers[-1].output_size)
         else:
             layer.init_weights(layer.input_size)
@@ -56,9 +57,7 @@ class GWUNetwork():
             for j in range(samples):
                 # forward propagation
 
-                #output = x_train[j].reshape(1, -1)
                 output = x_train[j]
-                print("output shape:" + str(output.shape))
                 for layer in self.layers:
                     output = layer.forward_propagation(output)
 
@@ -88,6 +87,6 @@ class GWUNetwork():
             if layer.type == "Activation":
                 rep += f'{layer.name} Activation'
             else:
-                rep += f'{layer.name} - ({layer.input_size}, {layer.output_size})\n'
+                rep += f'{layer.name} - (Input:{layer.input_size}, Output:{layer.output_size})\n'
 
         return rep

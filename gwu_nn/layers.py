@@ -55,7 +55,7 @@ class Dense(Layer):
         super().__init__(activation)
         self.type = None
         self.name = "Dense"
-        self.input_size = input_size
+        self.input_size = input_size # integer
         self.output_size = output_size
         self.add_bias = add_bias
 
@@ -67,7 +67,9 @@ class Dense(Layer):
             input_size (np.array): dimensions for the input array
         """
         if self.input_size is None:
-            self.input_size = input_size
+            self.input_size = input_size[1]
+
+        input_size = input_size[1]
 
         self.weights = np.random.randn(input_size, self.output_size) / np.sqrt(input_size + self.output_size)
         if self.add_bias:
@@ -118,12 +120,14 @@ class Convolutional(Layer):
         self.name = "Convolutional"
         self.input = None # (img width, img height, input channels)
         self.kernels = None # (kernel_size, kernel_size, num_kernels)
-        self.output = None # (img width, img height, num_kernels)
 
         self.input_size = input_size # (img width, img height, input channels)
-        self.output_size = (kernel_size, kernel_size, num_kernels)
         self.kernel_size = kernel_size # (n, n) odd number
         self.num_kernels = num_kernels # corresponds to number of feature maps
+        self.output_size = None # (img width, img height, num_kernels)
+
+        if (input_size != None):
+            self.output_size = (input_size[0], input_size[1], num_kernels) # (img width, img height, num_kernels)
 
 
     def init_weights(self, input_size):
@@ -135,6 +139,8 @@ class Convolutional(Layer):
         """
         if self.input_size is None:
             self.input_size = input_size
+            self.output_size = (input_size[0], input_size[1], self.num_kernels) # (img width, img height, num_kernels)
+
         
         # initialize kernel weights (kernel_size, kernel_size, num_kernels)
         self.kernels = np.random.randn(self.kernel_size, self.kernel_size, self.num_kernels)
@@ -142,7 +148,7 @@ class Convolutional(Layer):
 
     @apply_activation_forward
     def forward_propagation(self, input):
-        print(input.shape)
+
         assert(len(input.shape) == 3) # expects 3d ndarray
         """Applies the forward propagation for a convolutional layer. This will convolve the
         input value (calculated during forward propagation) with the layer's kernels.
@@ -224,4 +230,54 @@ class Convolutional(Layer):
         return pad_full
 
 
-#Class Flatten(Layer):
+class Flatten(Layer):
+
+    def __init__(self, input_size=None):
+        super().__init__(None) # Do I need this?
+        self.type = None
+        self.name = "Flatten"
+        self.input = None # (img width, img height, input channels)
+
+        self.input_size = input_size # (img width, img height, input channels)
+        self.output_size = None # (1, img width * img height * num_kernels)
+
+        if (input_size != None):
+            self.output_size = (1, input_size[0] * input_size[1] * input_size[2])
+
+
+    def init_weights(self, input_size):
+        assert(len(input_size) == 3) # expects 3d ndarray
+        """ just update the input size"""
+        if (self.input_size == None):
+            self.input_size = input_size
+            self.output_size = (1, input_size[0] * input_size[1] * input_size[2])
+
+
+    @apply_activation_forward
+    def forward_propagation(self, input):
+        assert(len(input.shape) == 3) # expects 3d ndarray
+        """Applies the forward propagation for a flat layer. This will just reshape the input
+        Args:
+            input (np.array): Input tensor calculated during forward propagation up to this layer.
+
+        Returns:
+            np.array(float): An output tensor with shape (1, input.shape[0] * input.shape[1] * input.shape[2])"""
+
+        self.input = input
+
+        return input.reshape(1,-1)
+
+
+    @apply_activation_backward
+    def backward_propagation(self, output_error, learning_rate):
+        """Applies the backward propagation for a flat layer. This will just reshape the output error (undo the flatten operation)
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+        
+
+        return output_error.reshape(self.input.shape)
+
