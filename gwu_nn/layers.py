@@ -1,8 +1,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from gwu_nn.activation_layers import Sigmoid, RELU, Softmax, Dummy
+from gwu_nn.activation_layers import Sigmoid, RELU, Softmax
 
-activation_functions = {'relu': RELU, 'sigmoid': Sigmoid, 'softmax': Softmax, 'dummy': Dummy}
+activation_functions = {'relu': RELU, 'sigmoid': Sigmoid, 'softmax': Softmax}
 
 
 def apply_activation_forward(forward_pass):
@@ -55,7 +55,7 @@ class Dense(Layer):
         super().__init__(activation)
         self.type = None
         self.name = "Dense"
-        self.input_size = input_size # integer
+        self.input_size = input_size
         self.output_size = output_size
         self.add_bias = add_bias
 
@@ -66,8 +66,8 @@ class Dense(Layer):
         Args:
             input_size (np.array): dimensions for the input array
         """
-        if type(input_size) is tuple:
-            input_size = input_size[1]
+        # if type(input_size) is tuple:
+        #     input_size = input_size[1]
         
         if self.input_size is None:
             self.input_size = input_size
@@ -107,9 +107,6 @@ class Dense(Layer):
             np.array(float): The gradient of the error up to and including this layer."""
         input_error = np.dot(output_error, self.weights.T)
 
-        #print("input.T " + str(self.input.T.shape))
-        #print("output_error " + str(output_error.shape))
-
         weights_error = np.dot(self.input.T, output_error)
 
         self.weights -= learning_rate * weights_error
@@ -119,42 +116,30 @@ class Dense(Layer):
 
 class Convolutional(Layer):
 
-    def __init__(self, num_kernels=1, kernel_size=3, activation=None, input_size=None):
+    def __init__(self, input_size=28, input_channels=1, kernel_size=3, num_kernels=1, activation=None):
         super().__init__(activation)
         self.type = None
         self.name = "Convolutional"
-        self.input = None # (img width, img height, input channels)
-        self.kernels = None # (kernel_size, kernel_size, num_kernels)
+        self.input = None # (input_size, input_size, input_channels)
+        self.kernels = np.random.randn(kernel_size, kernel_size, num_kernels)
 
-        self.input_size = input_size # (img width, img height, input channels)
-        self.kernel_size = kernel_size # (n, n) odd number
-        self.num_kernels = num_kernels # corresponds to number of feature maps
-        self.output_size = None # (img width, img height, num_kernels)
-
-        if (input_size != None):
-            self.output_size = (input_size[0], input_size[1], num_kernels) # (img width, img height, num_kernels)
-
+        self.input_size = input_size
+        self.input_channels = input_channels
+        self.kernel_size = kernel_size # should be odd number
+        self.num_kernels = num_kernels # also corresponds to number of feature maps
+        self.output_size = input_size
 
     def init_weights(self, input_size):
-        assert(len(input_size) == 3) # expects 3d ndarray
-        """Initialize the weights for the layer based on input and output size
-
-        Args:
-            input_size (np.array): dimensions for the input array (expects 3d ndarray)
-        """
-        if self.input_size is None:
-            self.input_size = input_size
-            self.output_size = (input_size[0], input_size[1], self.num_kernels) # (img width, img height, num_kernels)
-
-        
-        # initialize kernel weights (kernel_size, kernel_size, num_kernels)
-        self.kernels = np.random.randn(self.kernel_size, self.kernel_size, self.num_kernels)
-
+        """made arguments in __init__ mandatory"""
+        pass
 
     @apply_activation_forward
     def forward_propagation(self, input):
+        #print(input.shape)
+        #print(self.input_size)
+        assert(input.shape[0] == self.input_size)
+        assert(input.shape[1] == self.input_size)
 
-        assert(len(input.shape) == 3) # expects 3d ndarray
         """Applies the forward propagation for a convolutional layer. This will convolve the
         input value (calculated during forward propagation) with the layer's kernels.
 
@@ -163,14 +148,31 @@ class Convolutional(Layer):
 
         Returns:
             np.array(float): An output tensor with shape (img_width, img_height,self.num_kernels)"""
+        
+        output = np.zeros(shape=(self.input_size, self.input_size))
 
-        output = np.zeros(shape=(self.input_size[0], self.input_size[1], self.num_kernels))
+        self.input = input
+        #print(input.shape)
+        input_pad = self.apply_2d_padding(input, self.kernel_size)
+        #print(input_pad.shape)
+
+
+        for i_w in range(input.shape[0]): # input width
+            for i_h in range(input.shape[1]): # input height
+                for k_w in range(self.kernel_size):
+                    for k_h in range(self.kernel_size):
+                        output[i_w][i_h] += self.kernels[k_w][k_h] * input_pad[i_w+k_w][i_h+k_h]
+                            
+        return output
+
+        '''
+        output = np.zeros(shape=(self.input_size, self.input_size, self.num_kernels))
 
         self.input = input
         input_pad = self.apply_2d_padding(input, self.kernel_size)
 
-        for i_w in range(input.shape[0]): # img width
-            for i_h in range(input.shape[1]): # img height
+        for i_w in range(input.shape[0]): # input width
+            for i_h in range(input.shape[1]): # input height
                 for k_w in range(self.kernel_size):
                     for k_h in range(self.kernel_size):
                         for i in range(input.shape[2]): # input channels
@@ -178,10 +180,15 @@ class Convolutional(Layer):
                                 output[i_w][i_h][k] += self.kernels[k_w][k_h][k] * input_pad[i_w+k_w][i_h+k_h][i]
                             
         return output
+        '''
 
 
     @apply_activation_backward
     def backward_propagation(self, output_error, learning_rate):
+        #print("output error " + str(output_error.shape))
+        # input size is equal to output size
+        assert(output_error.shape[0] == self.output_size)
+
         """Applies the backward propagation for a convolutional layer. This will calculate the output error
          and will calculate the update gradient for the kernel weights
 
@@ -191,6 +198,28 @@ class Convolutional(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
 
+        # calculate kernel gradient (need padded input)
+        kernels_grad = np.zeros_like(self.kernels)
+        input_pad = self.apply_2d_padding(self.input, self.kernel_size)
+    
+        # calculate input error (need padded output)
+        input_error = np.zeros_like(self.input)    
+        output_error_pad = self.apply_2d_padding(output_error, self.kernel_size)
+
+        for i_w in range(self.input.shape[0]): # img width
+            for i_h in range(self.input.shape[1]): # img height
+                for k_w in range(self.kernel_size):
+                    for k_h in range(self.kernel_size):
+                        # calc kernel gradient and input_grad for i_w, i_h, k_w, k_h, i, k
+                        kernels_grad[k_w][k_h] += input_pad[i_w+k_w][i_h+k_h] * output_error[k_w][k_h]
+                        input_error[i_w][i_h] += output_error_pad[i_w+self.kernel_size-k_w-1][i_h+self.kernel_size-k_h-1] * self.kernels[k_w][k_h]
+    
+        # update kernel 
+        self.kernels -= learning_rate * kernels_grad
+
+        return input_error
+
+        '''
         # calculate kernel gradient (need padded input)
         kernels_grad = np.zeros_like(self.kernels)
         input_pad = self.apply_2d_padding(self.input, self.kernel_size)
@@ -213,22 +242,41 @@ class Convolutional(Layer):
         self.kernels -= learning_rate * kernels_grad
 
         return input_error
-
+        '''
     
+
     def apply_1d_padding(self, row, kernel_size):
+        """ Helper function to pad 1d array with kernel_size//2 zeros on either side """
+        padding = kernel_size//2
+        return np.concatenate([np.zeros(padding), row, np.zeros(shape=(padding))])
+
+
+    def apply_2d_padding(self, input, kernel_size):
+        """ Helper function to apply 2d padding to a 2d array,
+        pads with kernel_size//2 zeros on all sides """
+        width = input.shape[0]
+        padding = kernel_size//2
+
+        pad_sides = np.stack([self.apply_1d_padding(row,kernel_size) for row in input])
+        zeros = np.zeros(shape=(padding,width+2*padding))
+        pad_full = np.vstack([zeros, pad_sides, zeros])
+        return pad_full
+
+    def apply_3d_helper_padding(self, row, kernel_size):
         """ Helper function to pad 1d array with kernel_size//2 zeros on either side """
         padding = kernel_size//2
         channels = row.shape[-1]
         return np.concatenate([np.zeros(shape=(padding,channels)), row, np.zeros(shape=(padding,channels))])
 
-    def apply_2d_padding(self, input_img, kernel_size):
+
+    def apply_3d_padding(self, input_img, kernel_size):
         """ Helper function to apply 2d padding to a 3d array,
         pads with kernel_size//2 zeros on all sides """
         width = input_img.shape[1]
         channels = input_img.shape[2]
         padding = kernel_size//2
 
-        pad_sides = np.stack([self.apply_1d_padding(row,kernel_size) for row in input_img])
+        pad_sides = np.stack([self.apply_3d_helper_padding(row,kernel_size) for row in input_img])
         zeros = np.zeros(shape=(padding,width+2*padding,channels))
         pad_full = np.vstack([zeros, pad_sides, zeros])
         return pad_full
@@ -236,36 +284,29 @@ class Convolutional(Layer):
 
 class Flatten(Layer):
 
-    def __init__(self, input_size=None):
-        super().__init__(None) # Do I need this?
+    def __init__(self, input_size, input_channels=1): # int input_size
+        super().__init__(None)
         self.type = None
         self.name = "Flatten"
-        self.input = None # (img width, img height, input channels)
+        self.input = None # (input_size, input_size, input_channels)
 
-        self.input_size = input_size # (img width, img height, input channels)
-        self.output_size = None # (1, img width * img height * num_kernels)
-
-        if (input_size != None):
-            self.output_size = (1, input_size[0] * input_size[1] * input_size[2])
+        self.input_size = input_size
+        self.output_size = input_channels * input_size**2
 
 
     def init_weights(self, input_size):
-        assert(len(input_size) == 3) # expects 3d ndarray
-        """ just update the input size"""
-        if (self.input_size == None):
-            self.input_size = input_size
-            self.output_size = (1, input_size[0] * input_size[1] * input_size[2])
+        """made arguments in __init__ mandatory"""
+        pass
 
 
     @apply_activation_forward
     def forward_propagation(self, input):
-        assert(len(input.shape) == 3) # expects 3d ndarray
         """Applies the forward propagation for a flat layer. This will just reshape the input
         Args:
             input (np.array): Input tensor calculated during forward propagation up to this layer.
 
         Returns:
-            np.array(float): An output tensor with shape (1, input.shape[0] * input.shape[1] * input.shape[2])"""
+            np.array(float): An output tensor with shape (1, img_size**2 * input_channels)"""
 
         self.input = input
 
@@ -282,6 +323,5 @@ class Flatten(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
         
-
         return output_error.reshape(self.input.shape)
 

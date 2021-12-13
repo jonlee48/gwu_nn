@@ -34,10 +34,8 @@ class SigmoidActivation(ActivationFunction):
     @vectorize_activation
     def activation(cls, x):
         """Scales inputs to (0,1)
-
         Args:
             x (np.array): input into the layer/activation function
-
         Returns:
             np.array(floats): sigmoid(x)
         """
@@ -48,10 +46,8 @@ class SigmoidActivation(ActivationFunction):
     @vectorize_activation
     def activation_partial_derivative(cls, x):
         """Applies the partial derivative of the sigmoid function
-
         Args:
             x (np.array): partial derivative up to this layer/activation function
-
         Returns:
             np.array(floats): derivative of network up to this activation/layer
         """
@@ -64,10 +60,8 @@ class RELUActivation(ActivationFunction):
     @vectorize_activation
     def activation(cls, x):
         """Zeroes out negative values
-
         Args:
             x (np.array): input into the layer/activation function
-
         Returns:
             np.array(floats): ReLU(x)
         """
@@ -80,10 +74,8 @@ class RELUActivation(ActivationFunction):
     @vectorize_activation
     def activation_partial_derivative(cls, x):
         """Applies the partial derivative of the ReLU function to the input
-
         Args:
             x (np.array): partial derivative up to this layer/activation function
-
         Returns:
             np.array(floats): derivative of network up to this activation/layer
         """
@@ -98,53 +90,22 @@ class SoftmaxActivation(ActivationFunction):
     @classmethod
     def activation(cls, x):
         """Applies the softmax function to the input array
-
         Args:
             x (np.array): input into the layer/activation function
-
         Returns:
             np.array(floats): Softmax(x)
         """
-        epsilon = 1e-9
-
         exps = np.exp(x - np.max(x))
-        softmax = exps / np.sum(exps)
-        return np.clip(softmax, epsilon, 1 - epsilon) # added clipping to prevent infinity 
+        return exps / np.sum(exps)
 
     # TODO: Fix partial div implementation of softmax
     @classmethod
     def activation_partial_derivative(cls, x):
-        """Applies the partial derivative of the softmax function
-
+        """Applies the partial derivative of the sigmoid function
         Args:
             x (np.array): partial derivative up to this layer/activation function
-
         Returns:
             np.array(floats): derivative of network up to this activation/layer
         """
-
-        #print("x " + str(x.shape))
-        #s = x.reshape(-1, 1)
-        s = x.reshape(-1)
-        #s=x
-        #print("s " + str(s.shape))
-        dot = np.dot(s, s.T)
-        diag = np.diagflat(s)
-        #print("dot " + str(dot.shape))
-        #print("diag " + str(diag.shape))
-
-        #result = np.diagflat(s) - np.dot(s, s.T)
-        result = diag - dot
-        #print("result " + str(result.shape))
-        return result #np.diagflat(s) - np.dot(s, s.T)
-
-
-class DummyActivation(ActivationFunction):
-
-    @classmethod
-    def activation(cls, x):
-        return x
-
-    @classmethod
-    def activation_partial_derivative(cls, x):
-        return x
+        s = x.reshape(-1, 1)
+        return np.diagflat(s) - np.dot(s, s.T)

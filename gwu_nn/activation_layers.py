@@ -1,4 +1,4 @@
-from gwu_nn.activation_functions import SigmoidActivation, RELUActivation, SoftmaxActivation, DummyActivation
+from gwu_nn.activation_functions import SigmoidActivation, RELUActivation, SoftmaxActivation
 
 
 class ActivationLayer:
@@ -13,10 +13,8 @@ class ActivationLayer:
 
     def forward_propagation(self, input):
         """Applies the classes activation function to the provided input
-
         Args:
             input (np.array): output calculated forward up to this layer
-
         Returns:
             np.array(float): forward pass (output) up to this layer
         """
@@ -25,19 +23,12 @@ class ActivationLayer:
 
     def backward_propagation(self, output_error, learning_rate):
         """Applies the classes activation function to the provided input
-
         Args:
             output_error (np.array): output_error calculated backwards to this layer
-
         Returns:
             np.array(float): backwards pass (output_error) up to this layer
         """
-        #print("2output_error " + str(output_error.shape))
-        prime =  self.activation_prime(self.input)
-        #print("2prime " + str(prime.shape))
-        back = output_error * prime
-        #print("back " + str(back.shape))
-        return back #output_error * self.activation_prime(self.input)
+        return output_error * self.activation_prime(self.input)
 
 
 class Sigmoid(ActivationLayer):
@@ -57,9 +48,3 @@ class Softmax(ActivationLayer):
     def __init__(self):
         super().__init__(SoftmaxActivation)
         self.name = "Softmax"
-
-class Dummy(ActivationLayer):
-    """Layer that applies no activation function"""
-    def __init__(self):
-        super().__init__(DummyActivation)
-        self.name = "Dummy"
