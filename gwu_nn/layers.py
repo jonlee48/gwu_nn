@@ -116,11 +116,12 @@ class Convolutional(Layer):
         super().__init__(activation)
         self.type = None
         self.name = "Convolutional"
-        self.input = None # (input channels, img width, img height)
-        self.kernels = None # (num_kernels, kernel_size, kernel_size)
-        self.output = None # (num_kernels, img width, img height)
+        self.input = None # (img width, img height, input channels)
+        self.kernels = None # (kernel_size, kernel_size, num_kernels)
+        self.output = None # (img width, img height, num_kernels)
 
-        self.input_size = input_size # (input channels, img width, img height)
+        self.input_size = input_size # (img width, img height, input channels)
+        self.output_size = (kernel_size, kernel_size, num_kernels)
         self.kernel_size = kernel_size # (n, n) odd number
         self.num_kernels = num_kernels # corresponds to number of feature maps
 
@@ -135,12 +136,13 @@ class Convolutional(Layer):
         if self.input_size is None:
             self.input_size = input_size
         
-        # initialize kernel weights (num_kernels, kernel_size, kernel_size)
-        self.kernels = np.random.randn(self.num_kernels, self.kernel_size, self.kernel_size)
+        # initialize kernel weights (kernel_size, kernel_size, num_kernels)
+        self.kernels = np.random.randn(self.kernel_size, self.kernel_size, self.num_kernels)
 
 
     @apply_activation_forward
     def forward_propagation(self, input):
+        print(input.shape)
         assert(len(input.shape) == 3) # expects 3d ndarray
         """Applies the forward propagation for a convolutional layer. This will convolve the
         input value (calculated during forward propagation) with the layer's kernels.
@@ -149,20 +151,21 @@ class Convolutional(Layer):
             input (np.array): Input tensor calculated during forward propagation up to this layer.
 
         Returns:
-            np.array(float): An output tensor with shape (num_kernels, img_width, img_height)"""
+            np.array(float): An output tensor with shape (img_width, img_height,self.num_kernels)"""
 
-        output = np.zeros(shape=(self.num_kernels, self.input_size[1], self.input_size[2]))
+        output = np.zeros(shape=(self.input_size[0], self.input_size[1], self.num_kernels))
 
         self.input = input
         input_pad = self.apply_2d_padding(input, self.kernel_size)
 
-        for i in range(input.shape[0]): # input channels
-            for k in range(self.num_kernels): # output channels
-                for i_w in range(input.shape[1]): # img width
-                    for i_h in range(input.shape[2]): # img height
-                        for k_w in range(self.kernel_size):
-                            for k_h in range(self.kernel_size):
-                                output[k][i_w][i_h] += self.kernels[k][k_w][k_h] * input_pad[i][i_w+k_w][i_h+k_h]
+        for i_w in range(input.shape[0]): # img width
+            for i_h in range(input.shape[1]): # img height
+                for k_w in range(self.kernel_size):
+                    for k_h in range(self.kernel_size):
+                        for i in range(input.shape[2]): # input channels
+                            for k in range(self.num_kernels): # output channels
+                                output[i_w][i_h][k] += self.kernels[k_w][k_h][k] * input_pad[i_w+k_w][i_h+k_h][i]
+                            
         return output
 
 
@@ -186,35 +189,39 @@ class Convolutional(Layer):
         input_error = np.zeros_like(self.input)    
         output_error_pad = self.apply_2d_padding(output_error, self.kernel_size)
 
-        for i in range(self.input.shape[0]): # input channels
-            for k in range(self.num_kernels): # output channels
-                for i_w in range(self.input.shape[1]): # img width
-                    for i_h in range(self.input.shape[2]): # img height
-                        for k_w in range(self.kernel_size):
-                            for k_h in range(self.kernel_size):
-                                # calc kernel gradient and input_grad for i, k, i_w, i_h, k_w, k_h
-                                kernels_grad[k][k_w][k_h] += input_pad[i][i_w+k_w][i_h+k_h] * output_error[k][k_w][k_h]
-                                input_error[i][i_w][i_h] += output_error_pad[k][i_w+self.kernel_size-k_w-1][i_h+self.kernel_size-k_h-1] * self.kernels[k][k_w][k_h] 
+        for i_w in range(self.input.shape[0]): # img width
+            for i_h in range(self.input.shape[1]): # img height
+                for k_w in range(self.kernel_size):
+                    for k_h in range(self.kernel_size):
+                        for i in range(self.input.shape[2]): # input channels
+                            for k in range(self.num_kernels): # output channels
+                                # calc kernel gradient and input_grad for i_w, i_h, k_w, k_h, i, k
+                                kernels_grad[k_w][k_h][k] += input_pad[i_w+k_w][i_h+k_h][i] * output_error[k_w][k_h][k]
+                                input_error[i_w][i_h][i] += output_error_pad[i_w+self.kernel_size-k_w-1][i_h+self.kernel_size-k_h-1][k] * self.kernels[k_w][k_h][k]
     
         # update kernel 
         self.kernels -= learning_rate * kernels_grad
 
         return input_error
 
-   
-    def apply_1d_padding(self, input_img, kernel_size):
+    
+    def apply_1d_padding(self, row, kernel_size):
         """ Helper function to pad 1d array with kernel_size//2 zeros on either side """
-        pad = kernel_size//2
-        return np.concatenate([np.zeros(pad), input_img, np.zeros(pad)])
-
+        padding = kernel_size//2
+        channels = row.shape[-1]
+        return np.concatenate([np.zeros(shape=(padding,channels)), row, np.zeros(shape=(padding,channels))])
 
     def apply_2d_padding(self, input_img, kernel_size):
         """ Helper function to apply 2d padding to a 3d array,
         pads with kernel_size//2 zeros on all sides """
-        padded = []
-        for channel in input_img:
-            pad_side = np.stack([self.apply_1d_padding(row, kernel_size) for row in channel])
-            width = pad_side.shape[1]
-            pad_full = np.vstack([np.zeros(width), pad_side,np.zeros(width)])
-            padded.append(pad_full)
-        return np.stack(padded)
+        width = input_img.shape[1]
+        channels = input_img.shape[2]
+        padding = kernel_size//2
+
+        pad_sides = np.stack([self.apply_1d_padding(row,kernel_size) for row in input_img])
+        zeros = np.zeros(shape=(padding,width+2*padding,channels))
+        pad_full = np.vstack([zeros, pad_sides, zeros])
+        return pad_full
+
+
+#Class Flatten(Layer):

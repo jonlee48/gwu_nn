@@ -55,7 +55,10 @@ class GWUNetwork():
             err = 0
             for j in range(samples):
                 # forward propagation
-                output = x_train[j].reshape(1, -1)
+
+                #output = x_train[j].reshape(1, -1)
+                output = x_train[j]
+                print("output shape:" + str(output.shape))
                 for layer in self.layers:
                     output = layer.forward_propagation(output)
 
