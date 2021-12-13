@@ -112,6 +112,7 @@ class Dense(Layer):
         self.weights -= learning_rate * weights_error
         if self.add_bias:
             self.bias -= learning_rate * output_error
+
         return input_error
 
 class Convolutional(Layer):
@@ -135,8 +136,6 @@ class Convolutional(Layer):
 
     @apply_activation_forward
     def forward_propagation(self, input):
-        #print(input.shape)
-        #print(self.input_size)
         assert(input.shape[0] == self.input_size)
         assert(input.shape[1] == self.input_size)
 
@@ -152,40 +151,20 @@ class Convolutional(Layer):
         output = np.zeros(shape=(self.input_size, self.input_size))
 
         self.input = input
-        #print(input.shape)
         input_pad = self.apply_2d_padding(input, self.kernel_size)
-        #print(input_pad.shape)
 
 
         for i_w in range(input.shape[0]): # input width
             for i_h in range(input.shape[1]): # input height
-                for k_w in range(self.kernel_size):
-                    for k_h in range(self.kernel_size):
+                for k_w in range(self.kernel_size): # kernel width
+                    for k_h in range(self.kernel_size): #kernel height
                         output[i_w][i_h] += self.kernels[k_w][k_h] * input_pad[i_w+k_w][i_h+k_h]
-                            
+        
         return output
-
-        '''
-        output = np.zeros(shape=(self.input_size, self.input_size, self.num_kernels))
-
-        self.input = input
-        input_pad = self.apply_2d_padding(input, self.kernel_size)
-
-        for i_w in range(input.shape[0]): # input width
-            for i_h in range(input.shape[1]): # input height
-                for k_w in range(self.kernel_size):
-                    for k_h in range(self.kernel_size):
-                        for i in range(input.shape[2]): # input channels
-                            for k in range(self.num_kernels): # output channels
-                                output[i_w][i_h][k] += self.kernels[k_w][k_h][k] * input_pad[i_w+k_w][i_h+k_h][i]
-                            
-        return output
-        '''
 
 
     @apply_activation_backward
     def backward_propagation(self, output_error, learning_rate):
-        #print("output error " + str(output_error.shape))
         # input size is equal to output size
         assert(output_error.shape[0] == self.output_size)
 
@@ -218,31 +197,6 @@ class Convolutional(Layer):
         self.kernels -= learning_rate * kernels_grad
 
         return input_error
-
-        '''
-        # calculate kernel gradient (need padded input)
-        kernels_grad = np.zeros_like(self.kernels)
-        input_pad = self.apply_2d_padding(self.input, self.kernel_size)
-    
-        # calculate input error (need padded output)
-        input_error = np.zeros_like(self.input)    
-        output_error_pad = self.apply_2d_padding(output_error, self.kernel_size)
-
-        for i_w in range(self.input.shape[0]): # img width
-            for i_h in range(self.input.shape[1]): # img height
-                for k_w in range(self.kernel_size):
-                    for k_h in range(self.kernel_size):
-                        for i in range(self.input.shape[2]): # input channels
-                            for k in range(self.num_kernels): # output channels
-                                # calc kernel gradient and input_grad for i_w, i_h, k_w, k_h, i, k
-                                kernels_grad[k_w][k_h][k] += input_pad[i_w+k_w][i_h+k_h][i] * output_error[k_w][k_h][k]
-                                input_error[i_w][i_h][i] += output_error_pad[i_w+self.kernel_size-k_w-1][i_h+self.kernel_size-k_h-1][k] * self.kernels[k_w][k_h][k]
-    
-        # update kernel 
-        self.kernels -= learning_rate * kernels_grad
-
-        return input_error
-        '''
     
 
     def apply_1d_padding(self, row, kernel_size):
@@ -259,25 +213,6 @@ class Convolutional(Layer):
 
         pad_sides = np.stack([self.apply_1d_padding(row,kernel_size) for row in input])
         zeros = np.zeros(shape=(padding,width+2*padding))
-        pad_full = np.vstack([zeros, pad_sides, zeros])
-        return pad_full
-
-    def apply_3d_helper_padding(self, row, kernel_size):
-        """ Helper function to pad 1d array with kernel_size//2 zeros on either side """
-        padding = kernel_size//2
-        channels = row.shape[-1]
-        return np.concatenate([np.zeros(shape=(padding,channels)), row, np.zeros(shape=(padding,channels))])
-
-
-    def apply_3d_padding(self, input_img, kernel_size):
-        """ Helper function to apply 2d padding to a 3d array,
-        pads with kernel_size//2 zeros on all sides """
-        width = input_img.shape[1]
-        channels = input_img.shape[2]
-        padding = kernel_size//2
-
-        pad_sides = np.stack([self.apply_3d_helper_padding(row,kernel_size) for row in input_img])
-        zeros = np.zeros(shape=(padding,width+2*padding,channels))
         pad_full = np.vstack([zeros, pad_sides, zeros])
         return pad_full
 
@@ -359,12 +294,15 @@ class MaxPool(Layer):
         size = self.input_size//self.pool_size
         output = np.zeros(shape=(size,size))
 
-        for i_w in range(0, self.input.shape[0], self.pool_size): # img width
-            for i_h in range(0, self.input.shape[1], self.pool_size): # img height
+        # img width
+        for i_w in range(0, self.input.shape[0], self.pool_size):
+            # img height
+            for i_h in range(0, self.input.shape[1], self.pool_size):
                 mymax = float('-inf')
-                for p_w in range(self.pool_size):
-                    for p_h in range(self.pool_size):
+                for p_w in range(self.pool_size): # pool width
+                    for p_h in range(self.pool_size): #pool height
                         mymax = max(input[i_w+p_w][i_h+p_h], mymax)
+                # set output to max
                 output[i_w//self.pool_size][i_h//self.pool_size] = mymax
 
         return output

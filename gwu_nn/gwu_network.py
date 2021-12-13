@@ -1,7 +1,7 @@
 import numpy as np
-from gwu_nn.loss_functions import MSE, LogLoss, CrossEntropy
+from gwu_nn.loss_functions import MSE, LogLoss, CrossEntropy, MultiClassCrossEntropy
 
-loss_functions = {'mse': MSE, 'log_loss': LogLoss, 'cross_entropy': CrossEntropy}
+loss_functions = {'mse': MSE, 'log_loss': LogLoss, 'cross_entropy': CrossEntropy,  'multiclass_cross_entropy': MultiClassCrossEntropy}
 
 class GWUNetwork():
 
@@ -64,12 +64,11 @@ class GWUNetwork():
 
                 # compute loss (for display purpose only)
                 y_true = np.array(y_train[j]).reshape(-1, 1)
-                #print(y_true)
-                #print(output)
                 err += self.loss(y_true, output)
 
                 # backward propagation
                 error = self.loss_prime(y_true, output)
+
                 for layer in reversed(self.layers):
                     error = layer.backward_propagation(error, self.learning_rate)
 
