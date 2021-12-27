@@ -13,10 +13,8 @@ class ActivationLayer:
 
     def forward_propagation(self, input):
         """Applies the classes activation function to the provided input
-
         Args:
             input (np.array): output calculated forward up to this layer
-
         Returns:
             np.array(float): forward pass (output) up to this layer
         """
@@ -25,10 +23,8 @@ class ActivationLayer:
 
     def backward_propagation(self, output_error, learning_rate):
         """Applies the classes activation function to the provided input
-
         Args:
             output_error (np.array): output_error calculated backwards to this layer
-
         Returns:
             np.array(float): backwards pass (output_error) up to this layer
         """

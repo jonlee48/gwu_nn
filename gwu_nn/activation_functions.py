@@ -34,10 +34,8 @@ class SigmoidActivation(ActivationFunction):
     @vectorize_activation
     def activation(cls, x):
         """Scales inputs to (0,1)
-
         Args:
             x (np.array): input into the layer/activation function
-
         Returns:
             np.array(floats): sigmoid(x)
         """
@@ -48,10 +46,8 @@ class SigmoidActivation(ActivationFunction):
     @vectorize_activation
     def activation_partial_derivative(cls, x):
         """Applies the partial derivative of the sigmoid function
-
         Args:
             x (np.array): partial derivative up to this layer/activation function
-
         Returns:
             np.array(floats): derivative of network up to this activation/layer
         """
@@ -64,10 +60,8 @@ class RELUActivation(ActivationFunction):
     @vectorize_activation
     def activation(cls, x):
         """Zeroes out negative values
-
         Args:
             x (np.array): input into the layer/activation function
-
         Returns:
             np.array(floats): ReLU(x)
         """
@@ -80,10 +74,8 @@ class RELUActivation(ActivationFunction):
     @vectorize_activation
     def activation_partial_derivative(cls, x):
         """Applies the partial derivative of the ReLU function to the input
-
         Args:
             x (np.array): partial derivative up to this layer/activation function
-
         Returns:
             np.array(floats): derivative of network up to this activation/layer
         """
@@ -98,10 +90,8 @@ class SoftmaxActivation(ActivationFunction):
     @classmethod
     def activation(cls, x):
         """Applies the softmax function to the input array
-
         Args:
             x (np.array): input into the layer/activation function
-
         Returns:
             np.array(floats): Softmax(x)
         """
@@ -112,10 +102,8 @@ class SoftmaxActivation(ActivationFunction):
     @classmethod
     def activation_partial_derivative(cls, x):
         """Applies the partial derivative of the sigmoid function
-
         Args:
             x (np.array): partial derivative up to this layer/activation function
-
         Returns:
             np.array(floats): derivative of network up to this activation/layer
         """

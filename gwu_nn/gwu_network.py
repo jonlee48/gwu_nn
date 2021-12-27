@@ -1,7 +1,7 @@
 import numpy as np
-from gwu_nn.loss_functions import MSE, LogLoss, CrossEntropy
+from gwu_nn.loss_functions import MSE, LogLoss, CrossEntropy, MultiClassCrossEntropy
 
-loss_functions = {'mse': MSE, 'log_loss': LogLoss, 'cross_entropy': CrossEntropy}
+loss_functions = {'mse': MSE, 'log_loss': LogLoss, 'cross_entropy': CrossEntropy,  'multiclass_cross_entropy': MultiClassCrossEntropy}
 
 class GWUNetwork():
 
@@ -55,7 +55,10 @@ class GWUNetwork():
             err = 0
             for j in range(samples):
                 # forward propagation
-                output = x_train[j].reshape(1, -1)
+                if self.layers[0].name == "Dense":
+                    output = x_train[j].reshape(1, -1)
+                else:
+                    output= x_train[j]
                 for layer in self.layers:
                     output = layer.forward_propagation(output)
 
@@ -65,11 +68,12 @@ class GWUNetwork():
 
                 # backward propagation
                 error = self.loss_prime(y_true, output)
+
                 for layer in reversed(self.layers):
                     error = layer.backward_propagation(error, self.learning_rate)
 
             # calculate average error on all samples
-            if i % 10 == 0:
+            if i % 1 == 0:
                 err /= samples
                 print('epoch %d/%d   error=%f' % (i + 1, epochs, err))
                 

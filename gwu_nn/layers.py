@@ -66,6 +66,9 @@ class Dense(Layer):
         Args:
             input_size (np.array): dimensions for the input array
         """
+        # if type(input_size) is tuple:
+        #     input_size = input_size[1]
+        
         if self.input_size is None:
             self.input_size = input_size
 
@@ -103,9 +106,231 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
         input_error = np.dot(output_error, self.weights.T)
+
         weights_error = np.dot(self.input.T, output_error)
 
         self.weights -= learning_rate * weights_error
         if self.add_bias:
             self.bias -= learning_rate * output_error
+
+        return input_error
+
+class Convolutional(Layer):
+
+    def __init__(self, input_size=28, input_channels=1, kernel_size=3, num_kernels=1, activation=None):
+        super().__init__(activation)
+        self.type = None
+        self.name = "Convolutional"
+        self.input = None # (input_size, input_size, input_channels)
+        self.kernels = np.random.randn(kernel_size, kernel_size, num_kernels)
+
+        self.input_size = input_size
+        self.input_channels = input_channels
+        self.kernel_size = kernel_size # should be odd number
+        self.num_kernels = num_kernels # also corresponds to number of feature maps
+        self.output_size = input_size
+
+    def init_weights(self, input_size):
+        """made arguments in __init__ mandatory"""
+        pass
+
+    @apply_activation_forward
+    def forward_propagation(self, input):
+        assert(input.shape[0] == self.input_size)
+        assert(input.shape[1] == self.input_size)
+
+        """Applies the forward propagation for a convolutional layer. This will convolve the
+        input value (calculated during forward propagation) with the layer's kernels.
+
+        Args:
+            input (np.array): Input tensor calculated during forward propagation up to this layer.
+
+        Returns:
+            np.array(float): An output tensor with shape (img_width, img_height,self.num_kernels)"""
+        
+        output = np.zeros(shape=(self.input_size, self.input_size))
+
+        self.input = input
+        input_pad = self.apply_2d_padding(input, self.kernel_size)
+
+
+        for i_w in range(input.shape[0]): # input width
+            for i_h in range(input.shape[1]): # input height
+                for k_w in range(self.kernel_size): # kernel width
+                    for k_h in range(self.kernel_size): #kernel height
+                        output[i_w][i_h] += self.kernels[k_w][k_h] * input_pad[i_w+k_w][i_h+k_h]
+        
+        return output
+
+
+    @apply_activation_backward
+    def backward_propagation(self, output_error, learning_rate):
+        # input size is equal to output size
+        assert(output_error.shape[0] == self.output_size)
+
+        """Applies the backward propagation for a convolutional layer. This will calculate the output error
+         and will calculate the update gradient for the kernel weights
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+
+        # calculate kernel gradient (need padded input)
+        kernels_grad = np.zeros_like(self.kernels)
+        input_pad = self.apply_2d_padding(self.input, self.kernel_size)
+    
+        # calculate input error (need padded output)
+        input_error = np.zeros_like(self.input)    
+        output_error_pad = self.apply_2d_padding(output_error, self.kernel_size)
+
+        for i_w in range(self.input.shape[0]): # img width
+            for i_h in range(self.input.shape[1]): # img height
+                for k_w in range(self.kernel_size):
+                    for k_h in range(self.kernel_size):
+                        # calc kernel gradient and input_grad for i_w, i_h, k_w, k_h, i, k
+                        kernels_grad[k_w][k_h] += input_pad[i_w+k_w][i_h+k_h] * output_error[k_w][k_h]
+                        input_error[i_w][i_h] += output_error_pad[i_w+self.kernel_size-k_w-1][i_h+self.kernel_size-k_h-1] * self.kernels[k_w][k_h]
+    
+        # update kernel 
+        self.kernels -= learning_rate * kernels_grad
+
+        return input_error
+    
+
+    def apply_1d_padding(self, row, kernel_size):
+        """ Helper function to pad 1d array with kernel_size//2 zeros on either side """
+        padding = kernel_size//2
+        return np.concatenate([np.zeros(padding), row, np.zeros(shape=(padding))])
+
+
+    def apply_2d_padding(self, input, kernel_size):
+        """ Helper function to apply 2d padding to a 2d array,
+        pads with kernel_size//2 zeros on all sides """
+        width = input.shape[0]
+        padding = kernel_size//2
+
+        pad_sides = np.stack([self.apply_1d_padding(row,kernel_size) for row in input])
+        zeros = np.zeros(shape=(padding,width+2*padding))
+        pad_full = np.vstack([zeros, pad_sides, zeros])
+        return pad_full
+
+
+class Flatten(Layer):
+
+    def __init__(self, input_size, input_channels=1): # int input_size
+        super().__init__(None)
+        self.type = None
+        self.name = "Flatten"
+        self.input = None # (input_size, input_size, input_channels)
+
+        self.input_size = input_size
+        self.output_size = input_channels * input_size**2
+
+
+    def init_weights(self, input_size):
+        """made arguments in __init__ mandatory"""
+        pass
+
+
+    @apply_activation_forward
+    def forward_propagation(self, input):
+        """Applies the forward propagation for a flat layer. This will just reshape the input
+        Args:
+            input (np.array): Input tensor calculated during forward propagation up to this layer.
+
+        Returns:
+            np.array(float): An output tensor with shape (1, img_size**2 * input_channels)"""
+
+        self.input = input
+
+        return input.reshape(1,-1)
+
+
+    @apply_activation_backward
+    def backward_propagation(self, output_error, learning_rate):
+        """Applies the backward propagation for a flat layer. This will just reshape the output error (undo the flatten operation)
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+        
+        return output_error.reshape(self.input.shape)
+
+class MaxPool(Layer):
+    
+    def __init__(self, input_size, pool_size, input_channels=1): # int input_size
+        super().__init__(None)
+        self.type = None
+        self.name = "MaxPool"
+        self.input = None # (input_size, input_size, input_channels)
+        self.pool_size = pool_size
+        self.input_size = input_size
+        self.output_size = input_size//pool_size
+
+        if (input_size % pool_size != 0):
+            print("input_size not evenly divisible by pool_size")
+
+
+    def init_weights(self, input_size):
+        """made arguments in __init__ mandatory"""
+        pass
+
+
+    @apply_activation_forward
+    def forward_propagation(self, input):
+        """Applies the forward propagation for a max pooling layer. This will just return the input in the pool with the max value
+        Args:
+            input (np.array): Input tensor calculated during forward propagation up to this layer.
+
+        Returns:
+            np.array(float): An output tensor with shape (input_size//pool_size, input_size//pool_size)"""
+
+        self.input = input # need this for back prop
+
+        size = self.input_size//self.pool_size
+        output = np.zeros(shape=(size,size))
+
+        # img width
+        for i_w in range(0, self.input.shape[0], self.pool_size):
+            # img height
+            for i_h in range(0, self.input.shape[1], self.pool_size):
+                mymax = float('-inf')
+                for p_w in range(self.pool_size): # pool width
+                    for p_h in range(self.pool_size): #pool height
+                        mymax = max(input[i_w+p_w][i_h+p_h], mymax)
+                # set output to max
+                output[i_w//self.pool_size][i_h//self.pool_size] = mymax
+
+        return output
+
+
+    @apply_activation_backward
+    def backward_propagation(self, output_error, learning_rate):
+        """Applies the backward propagation for a max pooling layer. This will return the gradient error for only the max value, (otherwise zero)
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+        
+        input_error = np.zeros_like(self.input)
+
+        for i_w in range(0, self.input.shape[0], self.pool_size): # input width
+            for i_h in range(0, self.input.shape[1], self.pool_size): # input height
+                mymax = float('-inf')
+                max_w = 0
+                max_h = 0
+                for p_w in range(self.pool_size):
+                    for p_h in range(self.pool_size):
+                        if (self.input[i_w+p_w][i_h+p_h] > mymax):
+                            mymax = self.input[i_w+p_w][i_h+p_h]
+                            max_w = p_w
+                            max_h = p_h
+                input_error[i_w+max_w][i_h+max_h] = output_error[i_w//self.pool_size][i_h//self.pool_size]
+
         return input_error
